@@ -1,0 +1,82 @@
+---
+title: "first-markdown"
+author: "Hannah"
+date: "23/10/2019"
+output:
+  flexdashboard::flex_dashboard:
+  runtime: flexdashboard
+---
+
+This is an example of an interactive dashboard...
+
+    
+Column {data-width=600}
+-------------------------------------
+### Chart 1
+
+```{r}
+library(plotly)
+library(reshape2)
+library(raster)
+library(weathermetrics)
+
+GB_auto <- raster::getData('GADM', 
+                           country="GBR", 
+                           level=0, 
+                           #set the path to store your data in
+                           path='data/', 
+                           download=TRUE)
+
+GBclim <- raster::getData("worldclim", 
+                          res=5, 
+                          var="tmean",
+                          #set the path to store your data in
+                          path='data/', 
+                          download=TRUE)
+
+month <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+names(GBclim) <- month
+GBtemp <- crop(GBclim, GB_auto)
+exactGB <- mask(GBtemp, GB_auto)
+
+#WorldClim data has a scale factor of 10!
+exactGB <- exactGB/10
+
+alldf=as.data.frame(exactGB)
+squishdata <- melt(alldf, measure.vars=names(alldf))
+
+# split the data for plotly based on month
+jan<-subset(squishdata, variable=="Jan", na.rm=TRUE)
+jun<-subset(squishdata, variable=="Jun", na.rm=TRUE)
+
+# give axis titles
+x <- list (title = "Temperature")
+y <- list (title = "Frequency")
+
+# set the bin width
+xbinsno<-list(start=-5, end=20, size = 2.5)
+
+# plot the histogram calling all the variables we just set
+ihist<-plot_ly(alpha = 0.6) %>%
+        add_histogram(x = jan$value,
+        xbins=xbinsno, name="January") %>%
+        add_histogram(x = jun$value,
+        xbins=xbinsno, name="June") %>% 
+        layout(barmode = "overlay", xaxis=x, yaxis=y)
+
+ihist
+```
+
+
+Column {data-width=400}
+-------------------------------------
+
+### Chart 2
+
+```{r}
+plot(jan$value, jun$value)
+```
+
+
